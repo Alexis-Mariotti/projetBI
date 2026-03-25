@@ -7,21 +7,24 @@ from playwright.async_api import async_playwright, Playwright
 # Elle permet aussi de centraliser des methodes uttiles pour l'usage de Playwright
 class Scraper:
     # Constructeur de la classe Scraper
-    def __init__(self, is_headless: bool = False):
+    def __init__(self, playwright: Playwright, is_headless: bool = False):
         self.is_headless = is_headless
         # on initialise les variables vides qui seront innitialisées au lancement du navigateur
-        self.playwright = None
+        self.playwright = playwright
         self.browser = None
         self.current_page = None
 
     # Méthode pour lancer le navigateur et accéder à l'url spécifié
-    async def run(self, playwright: Playwright, url: str):
-        self.playwright = playwright
+    async def run(self, url: str):
         self.browser = await self.playwright.chromium.launch(headless=self.is_headless)
-        self.page = await self.browser.new_page()
-        await self.page.goto(url)
+        self.current_page = await self.browser.new_page()
+        await self.current_page.goto(url)
 
     # Méthode pour fermer le navigateur
     async def close(self):
         await self.browser.close()
+
+
+
+
 
