@@ -35,6 +35,13 @@ class StockPricesScraper (Scraper.Scraper):
         # on valide le formulaire de connexion
         await loginSubmitButton.click()
 
+        # debug
+        # si il y a une erreur de redirection, on redirige nous même
+        errorPage = self.current_page.locator(".neterror .error-code").get_by_text("ERR_TOO_MANY_REDIRECTS")
+        print(await errorPage.all())
+        if await errorPage.count() > 0:
+            await self.current_page.goto("https://www.boursorama.com/")
+
 
     # methode pour accepter les cookies sur le site de boursorama, si le mur de cookies s'affiche
     # le parametre withoutAgree permet de choisir si on accepte les cookies ou pas, par défaut on les accepte
