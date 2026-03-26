@@ -1,3 +1,4 @@
+import datetime
 from time import sleep
 
 import  Scraper
@@ -38,7 +39,6 @@ class StockPricesScraper (Scraper.Scraper):
         # debug
         # si il y a une erreur de redirection, on redirige nous même
         errorPage = self.current_page.locator(".neterror .error-code").get_by_text("ERR_TOO_MANY_REDIRECTS")
-        print(await errorPage.all())
         if await errorPage.count() > 0:
             await self.current_page.goto("https://www.boursorama.com/")
 
@@ -54,3 +54,24 @@ class StockPricesScraper (Scraper.Scraper):
             else:
                 button = cookiesWall.locator(".didomi-continue-without-agreeing")
             await button.click()
+
+    # Fonctionnalité permettant de collecter à partir de la page d’une action du site Boursorama, toutes les
+    # informations sur le cours du jour (date/heure de collecte, cours, cours d’ouverture, cours haut, cours bas, volumes)
+    async def getTodayDataStock(self, stockCode: str):
+        await self.connect_to_boursorama()
+
+        await self.current_page.goto("https://www.boursorama.com/cours/" + stockCode + "/")
+
+        # on récupere la date
+        currentDate = datetime.datetime.now()
+        actualStockPrice = await self.current_page.locator(".c-faceplate__price .c-instrument--last").text_content()
+        openingStockPrice = await self.current_page.locator(".c-instrument--open").text_content()
+        highStockPrice = await self.current_page.locator(".c-instrument--high").text_content()
+        lowStockPrice = await self.current_page.locator(".c-instrument--low").text_content()
+        volumeStockPrice = await self.current_page.locator(".c-instrument--totalvolume").text_content()
+
+
+        # on renvoie un dictionaire avec les information
+        return {"currentDate": currentDate, "actualStockPrice": actualStockPrice, "opening": openingStockPrice, "high": highStockPrice, "low": lowStockPrice, "volume": volumeStockPrice}
+
+
