@@ -38,6 +38,7 @@ class StockPricesScraper (Scraper.Scraper):
 
         # debug
         # si il y a une erreur de redirection, on redirige nous même
+        sleep(2) # attend chargement
         errorPage = self.current_page.locator(".neterror .error-code").get_by_text("ERR_TOO_MANY_REDIRECTS")
         if await errorPage.count() > 0:
             await self.current_page.goto("https://www.boursorama.com/")
@@ -57,10 +58,9 @@ class StockPricesScraper (Scraper.Scraper):
 
     # Fonctionnalité permettant de collecter à partir de la page d’une action du site Boursorama, toutes les
     # informations sur le cours du jour (date/heure de collecte, cours, cours d’ouverture, cours haut, cours bas, volumes)
-    async def getTodayDataStock(self, stockCode: str):
-        await self.connect_to_boursorama()
-
-        await self.current_page.goto("https://www.boursorama.com/cours/" + stockCode + "/")
+    async def getLiveDataStock(self, stockCode: str):
+        # on se rend sur la page correspondante à l'action dont on veut les données
+        await self.run("https://www.boursorama.com/cours/" + stockCode)
 
         # on récupere la date
         currentDate = datetime.datetime.now()
@@ -70,8 +70,60 @@ class StockPricesScraper (Scraper.Scraper):
         lowStockPrice = await self.current_page.locator(".c-instrument--low").text_content()
         volumeStockPrice = await self.current_page.locator(".c-instrument--totalvolume").text_content()
 
+        # on ferme le navigateur
+        await self.close()
+
 
         # on renvoie un dictionaire avec les information
         return {"currentDate": currentDate, "actualStockPrice": actualStockPrice, "opening": openingStockPrice, "high": highStockPrice, "low": lowStockPrice, "volume": volumeStockPrice}
 
+    # Fonctionnalité permettant de collecter à partir de la page d’une action du site Boursorama, toutes les
+    # informations sur l'historique du cours de l’action (date/heure de collecte, cours, cours d’ouverture, cours haut, cours bas, volumes) pour une période donnée
+    # period : permet de determiner la taille de la plage de donnée. Accepte uniquement les valeurs du formulaire sur le site Boursorama
+    async def getHistoricalDataStock(self, stockCode: str, startDate: str, period: str = "2 mois"):
+        # on se connecte à boursorama et se rend sur la page correspondante à l'action dont on veut les données
+        await self.connect_to_boursorama()
+        await self.current_page.goto("https://www.boursorama.com/cours/" + stockCode)
 
+        # Recupere les boutons de navigation
+        secondaryNav = self.current_page.locator("[aria-label=\"Menu secondaire\"]")
+        historyButton = secondaryNav.locator("[title=\"Historique\"]")
+
+        # navigue vers l'historique
+        await historyButton.click()
+
+        # Recupere les boutons de recherche de l'historique
+        historic_search = self.current_page.locator("#historic_search")
+        startDateInput = historic_search.locator("#historic_search_startDate")
+        periodInputUl = historic_search.locator("#historic_search_duration-listbox")
+        periodInput = periodInputUl.locator("xpath=..")
+        searchButton = historic_search.locator("#historic_search_filter")
+
+        # repli et lance la recherche
+        await startDateInput.press_sequentially(startDate)
+        # clique sur la periode voulu sur le combobox de periode
+        await periodInput.click()
+        await periodInputUl.get_by_text(period).click()
+        # lance la recherche
+        await searchButton.click()
+
+        sleep(1)
+
+        # Recupere le menu de pagination pour naviguer et recuperer toutes les données
+        paginationElements = self.current_page.locator(".c-pagination a")
+        pageCount = len(await paginationElements.all())
+
+        print(await paginationElements.all())
+
+        for i in range(pageCount):
+            # on recupere le numero de page dans la pagination et on clqiue dessus
+            await self.current_page.locator(".c-pagination a").nth(i).click()
+            resultTable = self.current_page.locator("[data-refreshable-id=\"historical-period\"] table")
+            resultTableRows = resultTable.locator("tbody tr")
+            print(await resultTableRows.all())
+
+        sleep(20)
+
+
+
+        print(secondaryNav)
