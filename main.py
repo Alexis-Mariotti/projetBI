@@ -7,6 +7,8 @@ import asyncio
 
 from playwright.async_api import async_playwright
 
+from models import init_db
+
 async def main():
     async with async_playwright() as playwright:
         scraper = StockPricesScraper.StockPricesScraper(playwright)
@@ -19,4 +21,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    init_db()
+    #asyncio.run(main())
