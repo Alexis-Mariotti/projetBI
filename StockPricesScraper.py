@@ -11,9 +11,10 @@ class StockPricesScraper (Scraper.Scraper):
     def __init__(self, playwright: Playwright, is_headless: bool = False):
         super().__init__(playwright, is_headless)
 
-        # On recupere les indentifiants de connexion à boursorama depuis le fichier .env
-        # pensez à renseigner les votres
-        load_dotenv()
+        # On recupere les indentifiants de connexion à boursorama depuis le fichier .env.local
+        # pensez à renseigner les votres en copiant le .env
+        dotenv_file = ".env.local"
+        load_dotenv(dotenv_file)
         self.boursoLogin = os.getenv("BOURSO_LOGIN")
         self.boursoPassword = os.getenv("BOURSO_PASSWORD")
 
@@ -118,6 +119,7 @@ class StockPricesScraper (Scraper.Scraper):
         for i in range(pageCount):
             # on recupere le numero de page dans la pagination et on clqiue dessus
             await self.current_page.locator(".c-pagination a").nth(i).click()
+            print(i)
             resultTable = self.current_page.locator("[data-refreshable-id=\"historical-period\"] table")
             resultTableRows = resultTable.locator("tbody tr")
             print(await resultTableRows.all())
