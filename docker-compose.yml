@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  my-mariadb:
+    image: mariadb:10.2.25
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin
+      MYSQL_DATABASE: project-bi
+    volumes:
+      - data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    restart: always
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: my-mariadb
+      MYSQL_ROOT_PASSWORD: root
+    depends_on:
+      - my-mariadb
+    restart: always
+
+volumes:
+  data:
