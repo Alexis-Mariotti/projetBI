@@ -12,8 +12,15 @@ Pour instaler le package, uttiliser la commande `pip install python-dotenv`.
 - pandas (fichiers csv)
   - `pip install pandas`
 - sqlalchemy (ORM sql)
-  - `pip install sqlalchemy pymysql`
+  - `pip install sqlalchemy mariadb`
 
-## base de donnée dans un container docker
+## Liste des conteneurs Docker
 
-todo
+- mariaDB : système de gestion de base de donnée de l'application
+  - Utilisation du DATABASE_URL dans le fichier ``.env`` pour se connecter à la base
+- phpmyadmin : application web de gestion d'SGBD 
+  - Accessible depuis : `http://localhost:8080/`
+
+## Lancement des conteneur docker 
+
+- Utilisation de la commande ``docker compose up``
