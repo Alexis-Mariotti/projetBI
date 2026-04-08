@@ -3,6 +3,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 import os
 from dotenv import load_dotenv
 
+from models import Action
 from models.sujet import Sujet
 from models.reponse import Reponse
 
@@ -34,3 +35,12 @@ def add_reponse(reponse: Reponse):
         session.commit()
     finally:
         session.close()
+
+def get_action_by_symbole_boursier(symbole_boursier: str) -> Action | None:
+    session = SessionLocal()
+    action = None
+    try:
+        action = session.query(Action).filter(Action.symbole_boursier == symbole_boursier).first()
+    finally:
+        session.close()
+        return action
