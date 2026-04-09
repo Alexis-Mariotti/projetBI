@@ -20,6 +20,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Base déclarative pour les modèles
 Base = declarative_base()
 
+# methode uttilisé pour ajouter un sujet de forum en base de donnée
 def add_sujet(sujet: Sujet):
     session = SessionLocal()
     try:
@@ -28,19 +29,3 @@ def add_sujet(sujet: Sujet):
     finally:
         session.close()
 
-def add_reponse(reponse: Reponse):
-    session = SessionLocal()
-    try:
-        session.add(reponse)
-        session.commit()
-    finally:
-        session.close()
-
-def get_action_by_symbole_boursier(symbole_boursier: str) -> Action | None:
-    session = SessionLocal()
-    action = None
-    try:
-        action = session.query(Action).filter(Action.symbole_boursier == symbole_boursier).first()
-    finally:
-        session.close()
-        return action
