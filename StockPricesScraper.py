@@ -9,11 +9,8 @@ from playwright.async_api import async_playwright, Playwright
 import os
 from dotenv import load_dotenv
 
-# on uttilise panda dans ce script pour parser les historiques csv
-import pandas as pd
-
-import db.database_repository
-from models import Action, HistoriqueFinJournee
+import db.database_repository as db_repo
+from models import Action, HistoriqueFinJournee, IndiceReference
 
 
 class StockPricesScraper (Scraper.Scraper):
@@ -81,9 +78,9 @@ class StockPricesScraper (Scraper.Scraper):
         lowStockPrice = await self.current_page.locator(".c-instrument--low").text_content()
         volumeStockPrice = await self.current_page.locator(".c-instrument--totalvolume").text_content()
         # recupere le symbole boursier depuis la page
-        stockSymbol = self.getStockSymbolFromStockPage()
+        stockSymbol = await self.getStockSymbolFromStockPage()
         # recupere le nom de l'action
-        stockName = self.getStockSymbolFromStockPage()
+        stockName = await self.getStockSymbolFromStockPage()
 
         # on ferme le navigateur
         await self.close()
@@ -95,7 +92,7 @@ class StockPricesScraper (Scraper.Scraper):
     # Fonctionnalité permettant de collecter à partir de la page d’une action du site Boursorama, toutes les
     # informations sur l'historique du cours de l’action (date/heure de collecte, cours, cours d’ouverture, cours haut, cours bas, volumes) pour une période donnée
     # period : permet de determiner la taille de la plage de donnée. Accepte uniquement les valeurs du formulaire sur le site Boursorama
-    async def getHistoricalDataStock(self, stockCode: str, startDate: str, period: str = "10A"):
+    async def getHistoricalDataStock(self, stockCode: str, period: str = "10A"):
         # on se connecte à boursorama et se rend sur la page correspondante à l'action dont on veut les données
         await self.connect_to_boursorama()
         await self.current_page.goto("https://www.boursorama.com/cours/" + stockCode)
@@ -107,11 +104,11 @@ class StockPricesScraper (Scraper.Scraper):
         sleep(1)
 
         # recupere le symbole boursier depuis la page
-        stockSymbol = self.getStockSymbolFromStockPage()
+        stockSymbol = await self.getStockSymbolFromStockPage()
         # recupere le nom de l'action
-        stockName = self.getStockSymbolFromStockPage()
-        secteur = self.getSecteurFromStockPage()
-        indice = self.getIndiceFromStockPage()
+        stockName = await self.getStockNameFromStockPage()
+        secteur = await self.getSecteurFromStockPage()
+        indice = await self.getIndiceFromStockPage()
 
         # Recupere le menu de durée du graphique pour selectioner la durée voulue
         durationMenu = self.current_page.locator(".c-quote-chart__durations")
@@ -130,60 +127,40 @@ class StockPricesScraper (Scraper.Scraper):
             await downloadButton.click(button="left")
         download = await download_info.value
         # sauvegarde le fichier dans le repertoire voulu
-        fileName = "./temp/historique/" + stockCode + "_" + period + "_" + datetime.datetime.now().strftime("%Y-%m-%d") + "_historical_data.csv"
+        fileName = "./temp/historique/" + stockSymbol + "_" + period + "_" + datetime.datetime.now().strftime("%Y-%m-%d") + "_historical_data.csv"
         await download.save_as(fileName)
 
         # sauvegarde en BD les données contenue dans le fichier qui viens d'etre telechargé
-        self.saveHistoricalDataStockFromCSV(fileName.replace("./temp/historique/", ""), stockSymbol, stockName, secteur, indice)
-
-    # Fonction uttilisé pour enregistrer les données d'un historique d'action telechargé depuis Boursorama en base de donnée
-    # La bibliotheque pandas est uttilisée
-    # fileName : seulement le nom du ficher avec son extension, il doit etre present dans le répertoire "./temp/historique/"
-    def saveHistoricalDataStockFromCSV(self, fileName: str, stockSymbol: str, stockName : str, secteur, indice) -> None:
-
-        df = pd.read_csv("./temp/historique/" + fileName, sep='\t')
-
-
-        print(df.axes)
-        print(df['date'])
-
-        # on cherche si recupere ou crée l'action si elle n'existe pas en BD
-        action = db.get_action_by_symbole_boursier(stockSymbol)
-        if action is None:
-            # crée l'action en base si elle n'existe pas
-            action = Action(nom_action=stockName,symbole_boursier=stockSymbol, secteur=secteur, indice_reference=indice)
-            db.add_action(action)
-
-        # on ajoute les historiques de fin de journee en base de donnée
-        for index, row in df.iterrows():
-            historique = HistoriqueFinJournee(date=DateTime.strptime(row['date'], '%d/%m/%Y'), ouverture=row['ouv'], haut=row['haut'], bas=row['bas'], cloture=row['clot'], volume=row['vol'], devise=row['devise'])
-            db.add_historique_fin_journee(historique)
+        db_repo.save_historical_data_stock_from_CSV(fileName.replace("./temp/historique/", ""), stockSymbol, stockName, secteur, indice)
 
 
     # methode pour recuperer le symbole boursier quand la page ouverte est la page d'une action
-    def getStockSymbolFromStockPage(self):
-        return self.current_page.locator(".c-faceplate__isin").text_content().split(" ")[1]
+    async def getStockSymbolFromStockPage(self):
+        attribute = await self.current_page.locator(".c-faceplate__isin").text_content()
+        return attribute.split(" ")[1]
 
     # methode pour recuperer le nom de l'action dont la page est ouverte
-    def getStockSymbolFromStockPage(self):
-        return self.current_page.locator(".c-faceplate__company-link").title.replace("Cours ", "").replace("\n", "")
+    async def getStockNameFromStockPage(self):
+        attribute = await self.current_page.locator(".c-faceplate__company-link").get_attribute("title")
+        return attribute.replace("Cours ", "").replace("\n", "")
 
     # methode pour recuperer le secteur de l'action dont la page est ouverte
     # si l'action n'a pas de secteur, renvoie None
-    def getSecteurFromStockPage(self):
+    async def getSecteurFromStockPage(self):
         # on verifie que cette action à un secteur, si non on renvoie null
-        secteur = self.current_page.locator("[title^=Consulter les valeurs du secteur]")
-        if secteur.count() > 0:
-            return secteur.text_content()
+        locator = self.current_page.locator("[title*=\"Consulter les valeurs du secteur\"]")
+        if await locator.count() > 0:
+            return await locator.text_content()
         else:
             return None
 
     # methode pour recuperer l'indice lié à l'action dont la page est ouverte
     # si l'action ne fait pas partie d'un indice, renvoie None
-    def getIndiceFromStockPage(self):
+    async def getIndiceFromStockPage(self):
         # on verifie que cette action est dans un indice, si non on renvoie null
-        indice = self.current_page.locator("[title^=Consulter l'indice de référence :]")
-        if indice.count() > 0:
-            return indice.text_content()
+        indice = self.current_page.locator("[title*=\"Consulter l'indice de référence :\"]")
+        if await indice.count() > 0:
+            indices = await indice.all()
+            return await indices[1].text_content()
         else:
                 return None
