@@ -15,11 +15,11 @@ async def main():
         #ricardStockData = await scraper.getLiveDataStock("1rPRI")
         #print(ricardStockData)
 
-        # ricardStockDataHistory = await scraper.getHistoricalDataStock("1rPRI", "27/03/2025")
+        ricardStockDataHistory = await scraper.getHistoricalDataStock("1rPRI", "27/03/2025")
 
-        scraper.saveHistoricalDataStockFromCSV("1rPRI_10A_2026-04-07_historical_data.csv")
+        #scraper.saveHistoricalDataStockFromCSV("1rPRI_10A_2026-04-07_historical_data.csv")
 
 
 if __name__ == "__main__":
     init_db()
-    #asyncio.run(main())
+    asyncio.run(main())

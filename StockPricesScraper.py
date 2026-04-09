@@ -23,7 +23,7 @@ class StockPricesScraper (Scraper.Scraper):
 
     # methode pour se connecter à boursorama, elle ouvre la page de connexion, remplit les champs de connexion et valide le formulaire
     async def connect_to_boursorama(self):
-        await self.run("https://www.boursorama.com/connexion/?org=/membre/inscription-succes")
+        await self.run("https://www.boursorama.com/connexion/")
         loginForm = self.current_page.locator("#login")
 
         mailField = loginForm.locator("#login_member_login")
@@ -42,11 +42,12 @@ class StockPricesScraper (Scraper.Scraper):
 
         # debug
         # si il y a une erreur de redirection, on redirige nous même
+        '''
         sleep(2) # attend chargement
         errorPage = self.current_page.locator(".neterror .error-code").get_by_text("ERR_TOO_MANY_REDIRECTS")
         if await errorPage.count() > 0:
             await self.current_page.goto("https://www.boursorama.com/")
-
+        '''
 
     # methode pour accepter les cookies sur le site de boursorama, si le mur de cookies s'affiche
     # le parametre withoutAgree permet de choisir si on accepte les cookies ou pas, par défaut on les accepte

@@ -11,7 +11,7 @@ Pour instaler le package, uttiliser la commande `pip install python-dotenv`.
   - `pip install python-dotenv`
 - pandas (fichiers csv)
   - `pip install pandas`
-- sqlalchemy (ORM sql)
+- sqlalchemy (ORM sql) et mariadb
   - `pip install sqlalchemy mariadb`
 
 ## Liste des conteneurs Docker
