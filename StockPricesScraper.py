@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 # on uttilise panda dans ce script pour parser les historiques csv
 import pandas as pd
 
-import db.database
+import db.database_repository
 from models import Action, HistoriqueFinJournee
 
 

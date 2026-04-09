@@ -1,6 +1,7 @@
 
 from db.database import SessionLocal
-from models import Reponse, Action
+from models import Reponse, Action, Sujet
+
 
 # methode uttilisé pour ajouter une reponse spécifique à un sujet de forum en base de donnée
 def add_reponse(reponse: Reponse):
@@ -35,6 +36,15 @@ def add_historique_fin_journee(historique):
     session = SessionLocal()
     try:
         session.add(historique)
+        session.commit()
+    finally:
+        session.close()
+
+# methode uttilisé pour ajouter un sujet de forum en base de donnée
+def add_sujet(sujet: Sujet):
+    session = SessionLocal()
+    try:
+        session.add(sujet)
         session.commit()
     finally:
         session.close()
