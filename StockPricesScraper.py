@@ -66,9 +66,13 @@ class StockPricesScraper (Scraper.Scraper):
 
     # Fonctionnalité permettant de collecter à partir de la page d’une action du site Boursorama, toutes les
     # informations sur le cours du jour (date/heure de collecte, cours, cours d’ouverture, cours haut, cours bas, volumes)
+    # Enregistre ces information en BD
     async def getLiveDataStock(self, stockCode: str):
         # on se rend sur la page correspondante à l'action dont on veut les données
         await self.run("https://www.boursorama.com/cours/" + stockCode)
+
+        # si le mur de coockies s'ouvre, on l'accepte
+        await self.acceptBoursoramaCookies()
 
         # on récupere la date
         currentDate = datetime.datetime.now()
@@ -77,17 +81,34 @@ class StockPricesScraper (Scraper.Scraper):
         highStockPrice = await self.current_page.locator(".c-instrument--high").text_content()
         lowStockPrice = await self.current_page.locator(".c-instrument--low").text_content()
         volumeStockPrice = await self.current_page.locator(".c-instrument--totalvolume").text_content()
+        #on recupere la devise
+        curency = await self.current_page.locator(".c-faceplate__price-currency").text_content()
         # recupere le symbole boursier depuis la page
         stockSymbol = await self.getStockSymbolFromStockPage()
         # recupere le nom de l'action
         stockName = await self.getStockSymbolFromStockPage()
+        secteur = await self.getSecteurFromStockPage()
+        indice = await self.getIndiceFromStockPage()
 
         # on ferme le navigateur
         await self.close()
 
 
-        # on renvoie un dictionaire avec les information
-        return {"currentDate": currentDate, "actualStockPrice": actualStockPrice, "opening": openingStockPrice, "high": highStockPrice, "low": lowStockPrice, "volume": volumeStockPrice}
+        # enregistre en base
+        # convertion de donnée pour enregister en base
+        db_repo.save_live_data_stock(stockSymbol=stockSymbol,
+                                     stockName=stockName,
+                                     secteur_label=secteur,
+                                     indice_label=indice,
+                                     prix_actuel=float(actualStockPrice.replace(',','.')),
+                                     ouverture=float(openingStockPrice.replace(',','.')),
+                                     haut=float(highStockPrice.replace(',','.')),
+                                     bas=float(lowStockPrice.replace(',','.')),
+                                     volume=int(volumeStockPrice),
+                                     devise=curency
+                                     ) #TODO: add a timestamp
+
+        #return {"currentDate": currentDate, "actualStockPrice": actualStockPrice, "opening": openingStockPrice, "high": highStockPrice, "low": lowStockPrice, "volume": volumeStockPrice}
 
     # Fonctionnalité permettant de collecter à partir de la page d’une action du site Boursorama, toutes les
     # informations sur l'historique du cours de l’action (date/heure de collecte, cours, cours d’ouverture, cours haut, cours bas, volumes) pour une période donnée

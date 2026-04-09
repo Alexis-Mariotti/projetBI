@@ -2,7 +2,7 @@ import pandas as pd
 import datetime
 
 from db.database import SessionLocal
-from models import Reponse, Action, Sujet, IndiceReference, Secteur, HistoriqueFinJournee
+from models import Reponse, Action, Sujet, IndiceReference, Secteur, HistoriqueFinJournee, HistoriqueLive
 
 
 # methode uttilisé pour ajouter une reponse spécifique à un sujet de forum en base de donnée
@@ -65,7 +65,7 @@ def get_action_by_symbole_boursier(symbole_boursier: str) -> Action | None:
         return action
 
 
-def add_historique_fin_journee(historique):
+def add_historique_fin_journee(historique : HistoriqueFinJournee):
     session = SessionLocal()
     try:
         session.add(historique)
@@ -74,6 +74,17 @@ def add_historique_fin_journee(historique):
         session.refresh(historique)
     finally:
         session.close()
+
+def add_historique_live(historique : HistoriqueLive):
+    session = SessionLocal()
+    try:
+        session.add(historique)
+        session.commit()
+        # refresh pour recuperer l'id
+        session.refresh(historique)
+    finally:
+        session.close()
+
 
 # methode uttilisé pour ajouter un sujet de forum en base de donnée
 def add_sujet(sujet: Sujet):
@@ -172,6 +183,11 @@ def save_historical_data_stock_from_CSV( fileName: str, stockSymbol: str, stockN
 
 
 # Fonction uttilisé pour enregister les données recupére sur une action en live
-def save_live_data_stock(stockSymbol: str, stockName : str, secteur_label: str, indice_label: str, prix_actuel: str, ouverture: str, haut: str, bas: str, volume: str, devise) -> None:
+def save_live_data_stock(stockSymbol: str, stockName : str, secteur_label: str, indice_label: str, prix_actuel: float, ouverture: float, haut: float, bas: float, volume: int, devise : str) -> None:
     # on cherche si recupere ou crée l'action si elle n'existe pas en BD
     action = get_or_create_action(stockSymbol, indice_label, secteur_label, stockName)
+
+    # on enregistre en base
+    historique_live = HistoriqueLive(prix_actuel=prix_actuel, ouverture=ouverture, haut=haut, bas=bas, volume=volume, devise=devise, action=action.id)
+    add_historique_live(historique_live)
+
