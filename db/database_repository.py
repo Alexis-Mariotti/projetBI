@@ -126,6 +126,28 @@ def get_or_create_secteur(nom_secteur: str) -> Secteur:
         session.close()
     return secteur
 
+# fonction qui crée ou renvoie une action si elle existe déja en base
+def get_or_create_action(symbole_boursier: str, indice_label : str, secteur_label : str, nom_action : str) -> Action:
+    # on cherche si recupere ou crée l'action si elle n'existe pas en BD
+    action = get_action_by_symbole_boursier(symbole_boursier)
+    if action is None:
+        # crée l'action en base si elle n'existe pas
+        # recupere l'incide et le secteur
+        indice_reference = None
+        secteur = None
+        if indice_label is not None:
+            indice_reference = get_or_create_indice_reference(indice_label)
+
+        if secteur_label is not None:
+            secteur = get_or_create_secteur(secteur_label)
+
+        # crée l'action avec les objets que l'on viens de charger
+        action = Action(nom_action=nom_action, symbole_boursier=symbole_boursier, secteur=secteur.id if secteur else None,
+                        indice_reference=indice_reference.id if indice_reference else None)
+        add_action(action)
+
+    return action
+
 
 # Fonction uttilisé pour enregistrer les données d'un historique d'action telechargé depuis Boursorama en base de donnée
 # La bibliotheque pandas est uttilisée
@@ -139,22 +161,7 @@ def save_historical_data_stock_from_CSV( fileName: str, stockSymbol: str, stockN
     print(df['date'])
 
     # on cherche si recupere ou crée l'action si elle n'existe pas en BD
-    action = get_action_by_symbole_boursier(stockSymbol)
-    if action is None:
-        # crée l'action en base si elle n'existe pas
-        # recupere l'incide et le secteur
-        indice_reference = None
-        secteur = None
-        if indice_label is not None:
-            indice_reference = get_or_create_indice_reference(indice_label)
-
-        if secteur_label is not None:
-            secteur = get_or_create_secteur(secteur_label)
-
-
-        # crée l'action avec les objets que l'on viens de charger
-        action = Action(nom_action=stockName,symbole_boursier=stockSymbol, secteur=secteur.id if secteur else None, indice_reference=indice_reference.id if indice_reference else None)
-        add_action(action)
+    action = get_or_create_action(stockSymbol, indice_label, secteur_label, stockName)
 
 
     # on ajoute les historiques de fin de journee en base de donnée
@@ -165,5 +172,6 @@ def save_historical_data_stock_from_CSV( fileName: str, stockSymbol: str, stockN
 
 
 # Fonction uttilisé pour enregister les données recupére sur une action en live
-def save_live_data_stock():
-    pass
+def save_live_data_stock(stockSymbol: str, stockName : str, secteur_label: str, indice_label: str, prix_actuel: str, ouverture: str, haut: str, bas: str, volume: str, devise) -> None:
+    # on cherche si recupere ou crée l'action si elle n'existe pas en BD
+    action = get_or_create_action(stockSymbol, indice_label, secteur_label, stockName)
