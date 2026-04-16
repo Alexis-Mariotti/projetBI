@@ -74,6 +74,9 @@ class StockPricesScraper (Scraper.Scraper):
         # si le mur de coockies s'ouvre, on l'accepte
         await self.acceptBoursoramaCookies()
 
+        # attend 1 sec pour etre certain que les requettes ajax sont chargées et que les données sont affichées
+        sleep(1)
+
         # on récupere la date
         currentDate = datetime.datetime.now()
         actualStockPrice = await self.current_page.locator(".c-faceplate__price .c-instrument--last").text_content()
@@ -93,19 +96,19 @@ class StockPricesScraper (Scraper.Scraper):
         # on ferme le navigateur
         await self.close()
 
-
         # enregistre en base
         # convertion de donnée pour enregister en base
         db_repo.save_live_data_stock(stockSymbol=stockSymbol,
                                      stockName=stockName,
                                      secteur_label=secteur,
                                      indice_label=indice,
-                                     prix_actuel=float(actualStockPrice.replace(',','.')),
-                                     ouverture=float(openingStockPrice.replace(',','.')),
-                                     haut=float(highStockPrice.replace(',','.')),
-                                     bas=float(lowStockPrice.replace(',','.')),
-                                     volume=int(volumeStockPrice),
-                                     devise=curency
+                                     prix_actuel=float(actualStockPrice.replace(',','.').replace(' ','')),
+                                     ouverture=float(openingStockPrice.replace(',','.').replace(' ','')),
+                                     haut=float(highStockPrice.replace(',','.').replace(' ','')),
+                                     bas=float(lowStockPrice.replace(',','.').replace(' ','')),
+                                     volume=int(volumeStockPrice.replace(' ','')),
+                                     devise=curency,
+                                     timestamp=currentDate.strftime("%Y-%m-%d %H:%M:%S")
                                      ) #TODO: add a timestamp
 
         #return {"currentDate": currentDate, "actualStockPrice": actualStockPrice, "opening": openingStockPrice, "high": highStockPrice, "low": lowStockPrice, "volume": volumeStockPrice}
@@ -118,10 +121,7 @@ class StockPricesScraper (Scraper.Scraper):
         await self.connect_to_boursorama()
         await self.current_page.goto("https://www.boursorama.com/cours/" + stockCode)
 
-        # Recupere les boutons de navigation
-        # secondaryNav = self.current_page.locator("[aria-label=\"Menu secondaire\"]")
-        # historyButton = secondaryNav.locator("[title=\"Historique\"]")
-
+        # attend 1 sec pour etre certain que les requettes ajax sont chargées et que les données sont affichées
         sleep(1)
 
         # recupere le symbole boursier depuis la page

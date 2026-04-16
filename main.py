@@ -17,7 +17,7 @@ async def main():
         #print(ricardStockData)
 
         #ricardStockDataHistory = await scraper.getHistoricalDataStock("SAF", "6M")
-        await scraper.getLiveDataStock("SABE")
+        await scraper.getLiveDataStock("AIR")
         #scraper.saveHistoricalDataStockFromCSV("1rPRI_10A_2026-04-07_historical_data.csv")
 
 

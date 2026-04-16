@@ -1,6 +1,8 @@
 import pandas as pd
 import datetime
 
+from sqlalchemy import TIMESTAMP, DateTime
+
 from db.database import SessionLocal
 from models import Reponse, Action, Sujet, IndiceReference, Secteur, HistoriqueFinJournee, HistoriqueLive
 
@@ -183,11 +185,11 @@ def save_historical_data_stock_from_CSV( fileName: str, stockSymbol: str, stockN
 
 
 # Fonction uttilisé pour enregister les données recupére sur une action en live
-def save_live_data_stock(stockSymbol: str, stockName : str, secteur_label: str, indice_label: str, prix_actuel: float, ouverture: float, haut: float, bas: float, volume: int, devise : str) -> None:
+def save_live_data_stock(stockSymbol: str, stockName : str, secteur_label: str, indice_label: str, prix_actuel: float, ouverture: float, haut: float, bas: float, volume: int, devise : str, timestamp : DateTime) -> None:
     # on cherche si recupere ou crée l'action si elle n'existe pas en BD
     action = get_or_create_action(stockSymbol, indice_label, secteur_label, stockName)
 
     # on enregistre en base
-    historique_live = HistoriqueLive(prix_actuel=prix_actuel, ouverture=ouverture, haut=haut, bas=bas, volume=volume, devise=devise, action=action.id)
+    historique_live = HistoriqueLive(prix_actuel=prix_actuel, ouverture=ouverture, haut=haut, bas=bas, volume=volume, devise=devise, action=action.id, timestamp=timestamp)
     add_historique_live(historique_live)
 
