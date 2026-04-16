@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, TIMESTAMP
 from sqlalchemy.orm import relationship
 from db.database import Base
 
@@ -13,6 +13,7 @@ class HistoriqueLive(Base):
     bas = Column(Float, nullable=True)
     volume = Column(Integer, nullable=True)
     devise = Column(String(255), nullable=True)
+    timestamp = Column(TIMESTAMP, nullable=True)
 
     action = Column(Integer, ForeignKey("action.id"))
 

@@ -1,8 +1,10 @@
 import pandas as pd
 import datetime
 
+from sqlalchemy import TIMESTAMP, DateTime
+
 from db.database import SessionLocal
-from models import Reponse, Action, Sujet, IndiceReference, Secteur, HistoriqueFinJournee
+from models import Reponse, Action, Sujet, IndiceReference, Secteur, HistoriqueFinJournee, HistoriqueLive
 
 
 # methode uttilisé pour ajouter une reponse spécifique à un sujet de forum en base de donnée
@@ -65,7 +67,7 @@ def get_action_by_symbole_boursier(symbole_boursier: str) -> Action | None:
         return action
 
 
-def add_historique_fin_journee(historique):
+def add_historique_fin_journee(historique : HistoriqueFinJournee):
     session = SessionLocal()
     try:
         session.add(historique)
@@ -74,6 +76,17 @@ def add_historique_fin_journee(historique):
         session.refresh(historique)
     finally:
         session.close()
+
+def add_historique_live(historique : HistoriqueLive):
+    session = SessionLocal()
+    try:
+        session.add(historique)
+        session.commit()
+        # refresh pour recuperer l'id
+        session.refresh(historique)
+    finally:
+        session.close()
+
 
 # methode uttilisé pour ajouter un sujet de forum en base de donnée
 def add_sujet(sujet: Sujet):
@@ -126,6 +139,28 @@ def get_or_create_secteur(nom_secteur: str) -> Secteur:
         session.close()
     return secteur
 
+# fonction qui crée ou renvoie une action si elle existe déja en base
+def get_or_create_action(symbole_boursier: str, indice_label : str, secteur_label : str, nom_action : str) -> Action:
+    # on cherche si recupere ou crée l'action si elle n'existe pas en BD
+    action = get_action_by_symbole_boursier(symbole_boursier)
+    if action is None:
+        # crée l'action en base si elle n'existe pas
+        # recupere l'incide et le secteur
+        indice_reference = None
+        secteur = None
+        if indice_label is not None:
+            indice_reference = get_or_create_indice_reference(indice_label)
+
+        if secteur_label is not None:
+            secteur = get_or_create_secteur(secteur_label)
+
+        # crée l'action avec les objets que l'on viens de charger
+        action = Action(nom_action=nom_action, symbole_boursier=symbole_boursier, secteur=secteur.id if secteur else None,
+                        indice_reference=indice_reference.id if indice_reference else None)
+        add_action(action)
+
+    return action
+
 
 # Fonction uttilisé pour enregistrer les données d'un historique d'action telechargé depuis Boursorama en base de donnée
 # La bibliotheque pandas est uttilisée
@@ -139,22 +174,7 @@ def save_historical_data_stock_from_CSV( fileName: str, stockSymbol: str, stockN
     print(df['date'])
 
     # on cherche si recupere ou crée l'action si elle n'existe pas en BD
-    action = get_action_by_symbole_boursier(stockSymbol)
-    if action is None:
-        # crée l'action en base si elle n'existe pas
-        # recupere l'incide et le secteur
-        indice_reference = None
-        secteur = None
-        if indice_label is not None:
-            indice_reference = get_or_create_indice_reference(indice_label)
-
-        if secteur_label is not None:
-            secteur = get_or_create_secteur(secteur_label)
-
-
-        # crée l'action avec les objets que l'on viens de charger
-        action = Action(nom_action=stockName,symbole_boursier=stockSymbol, secteur=secteur.id if secteur else None, indice_reference=indice_reference.id if indice_reference else None)
-        add_action(action)
+    action = get_or_create_action(stockSymbol, indice_label, secteur_label, stockName)
 
 
     # on ajoute les historiques de fin de journee en base de donnée
@@ -165,5 +185,11 @@ def save_historical_data_stock_from_CSV( fileName: str, stockSymbol: str, stockN
 
 
 # Fonction uttilisé pour enregister les données recupére sur une action en live
-def save_live_data_stock():
-    pass
+def save_live_data_stock(stockSymbol: str, stockName : str, secteur_label: str, indice_label: str, prix_actuel: float, ouverture: float, haut: float, bas: float, volume: int, devise : str, timestamp : DateTime) -> None:
+    # on cherche si recupere ou crée l'action si elle n'existe pas en BD
+    action = get_or_create_action(stockSymbol, indice_label, secteur_label, stockName)
+
+    # on enregistre en base
+    historique_live = HistoriqueLive(prix_actuel=prix_actuel, ouverture=ouverture, haut=haut, bas=bas, volume=volume, devise=devise, action=action.id, timestamp=timestamp)
+    add_historique_live(historique_live)
+
