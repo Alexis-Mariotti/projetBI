@@ -25,7 +25,7 @@ class StockPricesScraper (Scraper.Scraper):
         self.boursoPassword = os.getenv("BOURSO_PASSWORD")
 
     # methode pour se connecter à boursorama, elle ouvre la page de connexion, remplit les champs de connexion et valide le formulaire
-    async def connect_to_boursorama(self):
+    async def __connect_to_boursorama(self):
         await self.run("https://www.boursorama.com/connexion/")
         loginForm = self.current_page.locator("#login")
 
@@ -34,7 +34,7 @@ class StockPricesScraper (Scraper.Scraper):
         loginSubmitButton = loginForm.locator("#login_member_connect")
 
         # si le mur de coockies s'ouvre, on l'accepte
-        await self.acceptBoursoramaCookies();
+        await self.__acceptBoursoramaCookies();
 
         # on rempli les credentials
         await mailField.fill(self.boursoLogin)
@@ -54,7 +54,7 @@ class StockPricesScraper (Scraper.Scraper):
 
     # methode pour accepter les cookies sur le site de boursorama, si le mur de cookies s'affiche
     # le parametre withoutAgree permet de choisir si on accepte les cookies ou pas, par défaut on les accepte
-    async def acceptBoursoramaCookies(self, withoutAgree: bool = False):
+    async def __acceptBoursoramaCookies(self, withoutAgree: bool = False):
         cookiesWall = self.current_page.locator("#didomi-popup")
         if cookiesWall and await cookiesWall.is_visible():
             # on definit le bouton à cliquer differement selon si on veut accepter les cookies ou pas
@@ -72,7 +72,7 @@ class StockPricesScraper (Scraper.Scraper):
         await self.run("https://www.boursorama.com/cours/" + stockCode)
 
         # si le mur de coockies s'ouvre, on l'accepte
-        await self.acceptBoursoramaCookies()
+        await self.__acceptBoursoramaCookies()
 
         # attend 1 sec pour etre certain que les requettes ajax sont chargées et que les données sont affichées
         sleep(1)
@@ -87,11 +87,11 @@ class StockPricesScraper (Scraper.Scraper):
         #on recupere la devise
         curency = await self.current_page.locator(".c-faceplate__price-currency").text_content()
         # recupere le symbole boursier depuis la page
-        stockSymbol = await self.getStockSymbolFromStockPage()
+        stockSymbol = await self.__getStockSymbolFromStockPage()
         # recupere le nom de l'action
-        stockName = await self.getStockSymbolFromStockPage()
-        secteur = await self.getSecteurFromStockPage()
-        indice = await self.getIndiceFromStockPage()
+        stockName = await self.__getStockSymbolFromStockPage()
+        secteur = await self.__getSecteurFromStockPage()
+        indice = await self.__getIndiceFromStockPage()
 
         # on ferme le navigateur
         await self.close()
@@ -118,18 +118,18 @@ class StockPricesScraper (Scraper.Scraper):
     # period : permet de determiner la taille de la plage de donnée. Accepte uniquement les valeurs du formulaire sur le site Boursorama
     async def getHistoricalDataStock(self, stockCode: str, period: str = "10A"):
         # on se connecte à boursorama et se rend sur la page correspondante à l'action dont on veut les données
-        await self.connect_to_boursorama()
+        await self.__connect_to_boursorama()
         await self.current_page.goto("https://www.boursorama.com/cours/" + stockCode)
 
         # attend 1 sec pour etre certain que les requettes ajax sont chargées et que les données sont affichées
         sleep(1)
 
         # recupere le symbole boursier depuis la page
-        stockSymbol = await self.getStockSymbolFromStockPage()
+        stockSymbol = await self.__getStockSymbolFromStockPage()
         # recupere le nom de l'action
-        stockName = await self.getStockNameFromStockPage()
-        secteur = await self.getSecteurFromStockPage()
-        indice = await self.getIndiceFromStockPage()
+        stockName = await self.__getStockNameFromStockPage()
+        secteur = await self.__getSecteurFromStockPage()
+        indice = await self.__getIndiceFromStockPage()
 
         # Recupere le menu de durée du graphique pour selectioner la durée voulue
         durationMenu = self.current_page.locator(".c-quote-chart__durations")
@@ -151,23 +151,26 @@ class StockPricesScraper (Scraper.Scraper):
         fileName = "./temp/historique/" + stockSymbol + "_" + period + "_" + datetime.datetime.now().strftime("%Y-%m-%d") + "_historical_data.csv"
         await download.save_as(fileName)
 
+        # on ferme le navigateur une fois le fichiéé telechargé
+        await self.close()
+
         # sauvegarde en BD les données contenue dans le fichier qui viens d'etre telechargé
         db_repo.save_historical_data_stock_from_CSV(fileName.replace("./temp/historique/", ""), stockSymbol, stockName, secteur, indice)
 
 
     # methode pour recuperer le symbole boursier quand la page ouverte est la page d'une action
-    async def getStockSymbolFromStockPage(self):
+    async def __getStockSymbolFromStockPage(self):
         attribute = await self.current_page.locator(".c-faceplate__isin").text_content()
         return attribute.split(" ")[1]
 
     # methode pour recuperer le nom de l'action dont la page est ouverte
-    async def getStockNameFromStockPage(self):
+    async def __getStockNameFromStockPage(self):
         attribute = await self.current_page.locator(".c-faceplate__company-link").get_attribute("title")
         return attribute.replace("Cours ", "").replace("\n", "")
 
     # methode pour recuperer le secteur de l'action dont la page est ouverte
     # si l'action n'a pas de secteur, renvoie None
-    async def getSecteurFromStockPage(self):
+    async def __getSecteurFromStockPage(self):
         # on verifie que cette action à un secteur, si non on renvoie null
         locator = self.current_page.locator("[title*=\"Consulter les valeurs du secteur\"]")
         if await locator.count() > 0:
@@ -177,7 +180,7 @@ class StockPricesScraper (Scraper.Scraper):
 
     # methode pour recuperer l'indice lié à l'action dont la page est ouverte
     # si l'action ne fait pas partie d'un indice, renvoie None
-    async def getIndiceFromStockPage(self):
+    async def __getIndiceFromStockPage(self):
         # on verifie que cette action est dans un indice, si non on renvoie null
         indice = self.current_page.locator("[title*=\"Consulter l'indice de référence :\"]")
         if await indice.count() > 0:
