@@ -15,25 +15,25 @@ class ForumScraper (Scraper.Scraper):
     async def get_all_sujets(self, symbole_boursier: str):
         await self.get_all_sujets_by_page(symbole_boursier)
 
-        page_suivante : Any = self.current_page.find_by_role("link", name="Page suivante")
+        page_suivante : Any = self.current_page.get_by_role("link", name="Page suivante")
 
-        while page_suivante > 0:
-            page_suivante.click()
+        while await page_suivante.count() > 0:
+            await page_suivante.click()
             await self.get_all_sujets_by_page(symbole_boursier)
-            page_suivante = self.current_page.find_by_role("link", name="Page suivante")
+            page_suivante = self.current_page.get_by_role("link", name="Page suivante")
 
         return
 
     async def get_all_sujets_by_page(self, symbole_boursier: str):
-        list_a: list = self.current_page.get_by_title("Voir le sujet").all()
+        list_a: list = await self.current_page.get_by_title("Voir le sujet").all()
         for a in list_a:
-            href: str = a.get_attribute("href")
+            href: str = await a.get_attribute("href")
             await self.get_all_responses(href, symbole_boursier)
         return
 
     async def get_all_responses_by_page(self, page: Any, sujet: Sujet):
         all_reponse_container = page.locator('ul[data-load-more-content]')
-        reponses = all_reponse_container.locator('li').all()
+        reponses = await all_reponse_container.locator('li').all()
 
         for reponse in reponses:
             await self.save_reponse(reponse, sujet)
@@ -42,6 +42,10 @@ class ForumScraper (Scraper.Scraper):
 
     async def get_all_responses(self, url: str, symbole_boursier: str):
         new_page: Any = await self.browser.new_page()
+
+        if url.startswith("/"):
+            url = "https://www.boursorama.com" + url
+
         await new_page.goto(url)
 
         sujet: Sujet = await self.save_sujet(new_page, symbole_boursier)
@@ -52,38 +56,45 @@ class ForumScraper (Scraper.Scraper):
 
         pagination = div_main_page.locator("div .c-pagination")
 
-        if pagination.count() > 0:
+        if await pagination.count() > 0:
             page_suivante = pagination.get_by_role("link", name="Page suivante")
-            if page_suivante > 0:
-                while page_suivante > 0:
-                    page_suivante.click()
+            if await page_suivante.count() > 0:
+                while await page_suivante.count() > 0:
+                    await page_suivante.click()
                     await self.get_all_responses_by_page(new_page, sujet)
                     div_main_page = new_page.locator("div .l-basic-page__main")
                     pagination = div_main_page.locator("div .c-pagination")
                     page_suivante = pagination.get_by_role("link", name="Page suivante")
             else:
-                liste_page = pagination.get_by_role("link").all()
+                liste_page = await pagination.get_by_role("link").all()
                 liste_page.pop(0)
 
                 for page in liste_page:
-                    page.click()
-                    await self.get_all_responses_by_page(new_page, sujet)
+                    new_page_pagination: Any = await self.browser.new_page()
+                    url_pagination = await page.get_attribute("href")
 
-        new_page.close()
+                    if url_pagination.startswith("/"):
+                        url_pagination = "https://www.boursorama.com" + url_pagination
+
+                    await new_page_pagination.goto(url_pagination)
+                    await self.get_all_responses_by_page(new_page_pagination, sujet)
+                    await new_page_pagination.close()
+
+        await new_page.close()
 
         return
 
     async def save_sujet(self, page: Any, symbole_boursier: str) -> Sujet :
-        sujet_container: Any = page.locator("div .c-message")
+        sujet_container: Any = page.locator("div .c-message").first
 
-        titre: str = page.locator("h1 .c-title").text_content()
-        message: str = sujet_container.locator("p .c-message__text").text_content()
-        auteur: str = sujet_container.locator(".c-profile-card__name").locator("button").text_content()
+        titre: str = await page.locator("h1 .c-title").text_content()
+        message: str = await sujet_container.locator("p .c-message__text").text_content()
+        auteur: str = await sujet_container.locator(".c-profile-card__name").locator("button").text_content()
 
-        source_time: list = sujet_container.locator(".c-source__time")
+        source_time: Any = sujet_container.locator(".c-source__time")
 
-        date_string: str = source_time[0].text_content()
-        heure_string: str = source_time[1].text_content()
+        date_string: str = await source_time.nth(0).text_content()
+        heure_string: str = await source_time.nth(1).text_content()
 
         date: datetime = parse_french_date(date_string, heure_string)
 
@@ -102,13 +113,13 @@ class ForumScraper (Scraper.Scraper):
     async def save_reponse(self, reponse_container: Any, sujet: Sujet) -> None:
         reponse_container: Any = reponse_container.locator("div .c-message")
 
-        message: str = reponse_container.locator("p .c-message__text").text_content()
-        auteur: str = reponse_container.locator(".c-profile-card__name").locator("button").text_content()
+        message: str = await reponse_container.locator("p .c-message__text").text_content()
+        auteur: str = await reponse_container.locator(".c-profile-card__name").locator("button").text_content()
 
-        source_time: list = reponse_container.locator(".c-source__time")
+        source_time: Any = reponse_container.locator(".c-source__time")
 
-        date_string: str = source_time[0].text_content()
-        heure_string: str = source_time[1].text_content()
+        date_string: str = await source_time.nth(0).text_content()
+        heure_string: str = await source_time.nth(1).text_content()
 
         date: datetime = parse_french_date(date_string, heure_string)
 
@@ -120,8 +131,10 @@ class ForumScraper (Scraper.Scraper):
 
     async def scarpe_forum(self, symbole_boursier: str):
         await self.run("https://www.boursorama.com/cours/" + symbole_boursier)
-        await self.current_page.get_by_title("Forum").click()
-
+        await self.acceptBoursoramaCookies()
+        await self.current_page.get_by_role("navigation", name="Menu secondaire").get_by_title("Forum").click()
+        await self.get_all_sujets(symbole_boursier)
+        await self.close()
         return
 
 
