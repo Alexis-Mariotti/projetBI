@@ -1,7 +1,4 @@
-import os
-
-from dotenv import load_dotenv
-
+import ForumScraper
 import StockPricesScraper
 import asyncio
 
@@ -15,38 +12,40 @@ from models import init_db
 # N'oubliez pas de bien lire le readme pour ne pas oublier des étapes nescessaires au fonctionement du projet
 # notament l'instalation des dépendances ainsi que le lancement de le contner de la BD
 # vous pouvez consulter la BD sur php my admin : http://localhost:8080
-async def sampleForNils(scraper):
+async def sampleForNils(stock_scraper, forum_scraper):
     # données live de l'action AIRBUS
-    await scraper.getLiveDataStock("AIR")
+    await stock_scraper.getLiveDataStock("AIR")
     # données de l'action SAFRAN
-    await scraper.getLiveDataStock("SAF")
+    await stock_scraper.getLiveDataStock("SAF")
     # Les données de l'action RICARD
-    await scraper.getLiveDataStock("RI")
+    await stock_scraper.getLiveDataStock("RI")
 
      # données historique de l'action AIRBUS sur 6 mois
-    await scraper.getHistoricalDataStock("AIR", "6M")
+    await stock_scraper.getHistoricalDataStock("AIR", "6M")
     # données historique de l'action SAFRAN sur 6 mois
-    await scraper.getHistoricalDataStock("SAF", "6M")
+    await stock_scraper.getHistoricalDataStock("SAF", "6M")
     # Données historique de l'action RICARD sur 10 ans
-    await scraper.getHistoricalDataStock("1rPRI", "10A")
+    await stock_scraper.getHistoricalDataStock("RI", "10A")
 
     # on répuere les données de AIRBUS sur 5 jours, 5 ans et sur le live pour tester les chevauchements
-    await scraper.getHistoricalDataStock("AIR", "5J")
-    await scraper.getHistoricalDataStock("AIR", "5A")
-    await scraper.getLiveDataStock("AIR")
+    await stock_scraper.getHistoricalDataStock("AIR", "5J")
+    await stock_scraper.getHistoricalDataStock("AIR", "5A")
+    await stock_scraper.getLiveDataStock("AIR")
+
+    # scraping de l'un des forums (uniquement 1 par défault parce que ça prend énormement de temps)
+
+    await forum_scraper.scarpe_forum("RI")
+    #await forum_scraper.scarpe_forum("SAF")
+
+    # AIRBUS ne possède pas de forum sur boursorama
 
 
 async def main():
     async with async_playwright() as playwright:
-        scraper = StockPricesScraper.StockPricesScraper(playwright, is_headless=False)
-        #ricardStockData = await scraper.getLiveDataStock("1rPRI")
-        #print(ricardStockData)
+        stock_scraper = StockPricesScraper.StockPricesScraper(playwright, is_headless=False)
+        forum_scraper = ForumScraper.ForumScraper(playwright)
 
-        #ricardStockDataHistory = await scraper.getHistoricalDataStock("SAF", "6M")
-        #await scraper.getLiveDataStock("AIR")
-        #scraper.saveHistoricalDataStockFromCSV("1rPRI_10A_2026-04-07_historical_data.csv")
-
-        await sampleForNils(scraper)
+        await sampleForNils(stock_scraper, forum_scraper)
 
 
 if __name__ == "__main__":
