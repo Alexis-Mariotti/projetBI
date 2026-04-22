@@ -15,12 +15,12 @@ class ForumScraper (Scraper.Scraper):
     async def get_all_sujets(self, symbole_boursier: str):
         await self.get_all_sujets_by_page(symbole_boursier)
 
-        page_suivante : Any = self.current_page.get_by_role("link", name="Page suivante")
+        page_suivante : Any = self.current_page.get_by_role("link", name="Page suivante").first
 
         while await page_suivante.count() > 0:
             await page_suivante.click()
             await self.get_all_sujets_by_page(symbole_boursier)
-            page_suivante = self.current_page.get_by_role("link", name="Page suivante")
+            page_suivante = self.current_page.get_by_role("link", name="Page suivante").first
 
         return
 
@@ -54,7 +54,7 @@ class ForumScraper (Scraper.Scraper):
 
         await self.get_all_responses_by_page(new_page, sujet)
 
-        pagination = div_main_page.locator("div .c-pagination")
+        pagination = div_main_page.locator("div .c-pagination").first
 
         if await pagination.count() > 0:
             page_suivante = pagination.get_by_role("link", name="Page suivante")
@@ -63,7 +63,7 @@ class ForumScraper (Scraper.Scraper):
                     await page_suivante.click()
                     await self.get_all_responses_by_page(new_page, sujet)
                     div_main_page = new_page.locator("div .l-basic-page__main")
-                    pagination = div_main_page.locator("div .c-pagination")
+                    pagination = div_main_page.locator("div .c-pagination").first
                     page_suivante = pagination.get_by_role("link", name="Page suivante")
             else:
                 liste_page = await pagination.get_by_role("link").all()
@@ -87,9 +87,13 @@ class ForumScraper (Scraper.Scraper):
     async def save_sujet(self, page: Any, symbole_boursier: str) -> Sujet :
         sujet_container: Any = page.locator("div .c-message").first
 
-        titre: str = await page.locator("h1 .c-title").text_content()
-        message: str = await sujet_container.locator("p .c-message__text").text_content()
-        auteur: str = await sujet_container.locator(".c-profile-card__name").locator("button").text_content()
+        titre_brut: str = await page.locator("h1 .c-title").text_content()
+        message_brut: str = await sujet_container.locator("p .c-message__text").text_content()
+        auteur_brut: str = await sujet_container.locator(".c-profile-card__name").locator("button").text_content()
+
+        titre: str = titre_brut.strip() if titre_brut else ""
+        message: str = message_brut.strip() if message_brut else ""
+        auteur: str = auteur_brut.strip() if auteur_brut else ""
 
         source_time: Any = sujet_container.locator(".c-source__time")
         nb_date_elements = await source_time.count()
@@ -124,8 +128,11 @@ class ForumScraper (Scraper.Scraper):
     async def save_reponse(self, reponse_container: Any, sujet: Sujet) -> None:
         reponse_container: Any = reponse_container.locator("div .c-message")
 
-        message: str = await reponse_container.locator("p .c-message__text").text_content()
-        auteur: str = await reponse_container.locator(".c-profile-card__name").locator("button").text_content()
+        message_brut: str = await reponse_container.locator("p .c-message__text").text_content()
+        auteur_brut: str = await reponse_container.locator(".c-profile-card__name").locator("button").text_content()
+
+        message: str = message_brut.strip() if message_brut else ""
+        auteur: str = auteur_brut.strip() if auteur_brut else ""
 
         source_time: Any = reponse_container.locator(".c-source__time")
         nb_date_elements = await source_time.count()
