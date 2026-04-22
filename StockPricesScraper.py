@@ -78,7 +78,7 @@ class StockPricesScraper (Scraper.Scraper):
         # recupere le symbole boursier depuis la page
         stockSymbol = await self.__getStockSymbolFromStockPage()
         # recupere le nom de l'action
-        stockName = await self.__getStockSymbolFromStockPage()
+        stockName = await self.__getStockNameFromStockPage()
         secteur = await self.__getSecteurFromStockPage()
         indice = await self.__getIndiceFromStockPage()
 
