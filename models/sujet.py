@@ -6,6 +6,11 @@ from db.database import Base
 class Sujet(Base):
     __tablename__ = "sujet"
 
+    __table_args__ = {
+        'mysql_charset': 'utf8mb4',
+        'mysql_collate': 'utf8mb4_unicode_ci'
+    }
+
     id = Column(Integer, primary_key=True, index=True)
     titre = Column(String(255), nullable=True)
     message = Column(Text(length=65535), nullable=True)

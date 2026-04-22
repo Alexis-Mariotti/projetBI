@@ -6,6 +6,11 @@ from db.database import Base
 class Reponse(Base):
     __tablename__ = "reponse"
 
+    __table_args__ = {
+        'mysql_charset': 'utf8mb4',
+        'mysql_collate': 'utf8mb4_unicode_ci'
+    }
+
     id = Column(Integer, primary_key=True, index=True)
     message = Column(Text(length=65535), nullable=True)
     auteur = Column(String(255), nullable=True)
