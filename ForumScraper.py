@@ -1,4 +1,4 @@
-import sys
+import re
 from datetime import datetime
 from typing import Any
 
@@ -16,14 +16,23 @@ class ForumScraper (Scraper.Scraper):
     async def get_all_sujets(self, symbole_boursier: str):
         await self.get_all_sujets_by_page(symbole_boursier)
 
-        page_suivante : Any = self.current_page.get_by_role("link", name="Page suivante").first
+        url_forum = self.current_page.url
+        last_url_forum = await self.current_page.get_by_role("link", name="Dernière page").first.get_attribute("href")
 
-        while await page_suivante.count() > 0:
-            await page_suivante.click()
+        resultat = re.search(r"page-(\d+)", last_url_forum)
+
+        if resultat:
+            last_page_number = int(resultat.group(1))
+        else:
+            return None
+
+        page_number = 2
+        while page_number <= last_page_number:
+            await self.current_page.goto(url_forum + "page-" + str(page_number))
             await self.get_all_sujets_by_page(symbole_boursier)
-            page_suivante = self.current_page.get_by_role("link", name="Page suivante").first
+            page_number += 1
 
-        return
+        return None
 
     async def get_all_sujets_by_page(self, symbole_boursier: str):
         list_a: list = await self.current_page.get_by_title("Voir le sujet").all()
