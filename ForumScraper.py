@@ -1,3 +1,4 @@
+import sys
 from datetime import datetime
 from typing import Any
 
@@ -32,8 +33,7 @@ class ForumScraper (Scraper.Scraper):
         return
 
     async def get_all_responses_by_page(self, page: Any, sujet: Sujet):
-        all_reponse_container = page.locator('ul[data-load-more-content]')
-        reponses = await all_reponse_container.locator('li').all()
+        reponses = await page.locator('ul[data-load-more-content] > li').all()
 
         for reponse in reponses:
             await self.save_reponse(reponse, sujet)
@@ -48,13 +48,15 @@ class ForumScraper (Scraper.Scraper):
 
         await new_page.goto(url)
 
+        await self.acceptBoursoramaCookies(new_page)
+
         sujet: Sujet = await self.save_sujet(new_page, symbole_boursier)
 
-        div_main_page = new_page.locator("div .l-basic-page__main")
+        div_main_page = new_page.locator("div.l-basic-page__main")
 
         await self.get_all_responses_by_page(new_page, sujet)
 
-        pagination = div_main_page.locator("div .c-pagination").first
+        pagination = div_main_page.locator("div.c-pagination").first
 
         if await pagination.count() > 0:
             page_suivante = pagination.get_by_role("link", name="Page suivante")
@@ -62,8 +64,8 @@ class ForumScraper (Scraper.Scraper):
                 while await page_suivante.count() > 0:
                     await page_suivante.click()
                     await self.get_all_responses_by_page(new_page, sujet)
-                    div_main_page = new_page.locator("div .l-basic-page__main")
-                    pagination = div_main_page.locator("div .c-pagination").first
+                    div_main_page = new_page.locator("div.l-basic-page__main")
+                    pagination = div_main_page.locator("div.c-pagination").first
                     page_suivante = pagination.get_by_role("link", name="Page suivante")
             else:
                 liste_page = await pagination.get_by_role("link").all()
@@ -71,6 +73,8 @@ class ForumScraper (Scraper.Scraper):
 
                 for page in liste_page:
                     new_page_pagination: Any = await self.browser.new_page()
+                    await self.acceptBoursoramaCookies(new_page_pagination)
+
                     url_pagination = await page.get_attribute("href")
 
                     if url_pagination.startswith("/"):
@@ -85,10 +89,10 @@ class ForumScraper (Scraper.Scraper):
         return
 
     async def save_sujet(self, page: Any, symbole_boursier: str) -> Sujet :
-        sujet_container: Any = page.locator("div .c-message").first
+        sujet_container: Any = page.locator("div.c-message").first
 
-        titre_brut: str = await page.locator("h1 .c-title").text_content()
-        message_brut: str = await sujet_container.locator("p .c-message__text").text_content()
+        titre_brut: str = await page.locator("h1.c-title").text_content()
+        message_brut: str = await sujet_container.locator("p.c-message__text").text_content()
         auteur_brut: str = await sujet_container.locator(".c-profile-card__name").locator("button").text_content()
 
         titre: str = titre_brut.strip() if titre_brut else ""
@@ -126,9 +130,9 @@ class ForumScraper (Scraper.Scraper):
         return sujet
 
     async def save_reponse(self, reponse_container: Any, sujet: Sujet) -> None:
-        reponse_container: Any = reponse_container.locator("div .c-message")
+        reponse_container: Any = reponse_container.locator("div.c-message")
 
-        message_brut: str = await reponse_container.locator("p .c-message__text").text_content()
+        message_brut: str = await reponse_container.locator("p.c-message__text").text_content()
         auteur_brut: str = await reponse_container.locator(".c-profile-card__name").locator("button").text_content()
 
         message: str = message_brut.strip() if message_brut else ""
