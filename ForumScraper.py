@@ -92,8 +92,13 @@ class ForumScraper (Scraper.Scraper):
         sujet_container: Any = page.locator("div.c-message").first
 
         titre_brut: str = await page.locator("h1.c-title").text_content()
-        message_brut: str = await sujet_container.locator("p.c-message__text").text_content()
-        auteur_brut: str = await sujet_container.locator(".c-profile-card__name").locator("button").text_content()
+
+        texte_locator = sujet_container.locator("p.c-message__text")
+
+        lignes_brutes = await texte_locator.all_text_contents()
+        message_brut = "\n".join(lignes_brutes)
+
+        auteur_brut: str = await sujet_container.locator(".c-profile-card__name").first.locator("button").text_content()
 
         titre: str = titre_brut.strip() if titre_brut else ""
         message: str = message_brut.strip() if message_brut else ""
@@ -132,8 +137,15 @@ class ForumScraper (Scraper.Scraper):
     async def save_reponse(self, reponse_container: Any, sujet: Sujet) -> None:
         reponse_container: Any = reponse_container.locator("div.c-message")
 
-        message_brut: str = await reponse_container.locator("p.c-message__text").text_content()
-        auteur_brut: str = await reponse_container.locator(".c-profile-card__name").locator("button").text_content()
+        texte_locator = reponse_container.locator("p.c-message__text")
+
+        if await texte_locator.count() == 0:
+            return None
+
+        lignes_brutes = await texte_locator.all_text_contents()
+        message_brut = "\n".join(lignes_brutes)
+
+        auteur_brut: str = await reponse_container.locator(".c-profile-card__name").first.locator("button").text_content()
 
         message: str = message_brut.strip() if message_brut else ""
         auteur: str = auteur_brut.strip() if auteur_brut else ""
