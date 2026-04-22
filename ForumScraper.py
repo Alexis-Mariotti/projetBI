@@ -13,12 +13,19 @@ class ForumScraper (Scraper.Scraper):
         super().__init__(playwright, is_headless)
 
     async def get_all_sujets(self, symbole_boursier: str):
+        await self.get_all_sujets_by_page(symbole_boursier)
 
-        #TODO : récupération de chaque page de sujet du forum
+        page_suivante : Any = self.current_page.find_by_role("link", name="Page suivante")
+
+        while page_suivante > 0:
+            page_suivante.click()
+            await self.get_all_sujets_by_page(symbole_boursier)
+            page_suivante = self.current_page.find_by_role("link", name="Page suivante")
+
         return
 
     async def get_all_sujets_by_page(self, symbole_boursier: str):
-        list_a: list = await self.current_page.get_by_title("Voir le sujet").all()
+        list_a: list = self.current_page.get_by_title("Voir le sujet").all()
         for a in list_a:
             href: str = a.get_attribute("href")
             await self.get_all_responses(href, symbole_boursier)
@@ -51,6 +58,8 @@ class ForumScraper (Scraper.Scraper):
                 while page_suivante > 0:
                     page_suivante.click()
                     await self.get_all_responses_by_page(new_page, sujet)
+                    div_main_page = new_page.locator("div .l-basic-page__main")
+                    pagination = div_main_page.locator("div .c-pagination")
                     page_suivante = pagination.get_by_role("link", name="Page suivante")
             else:
                 liste_page = pagination.get_by_role("link").all()
@@ -59,6 +68,9 @@ class ForumScraper (Scraper.Scraper):
                 for page in liste_page:
                     page.click()
                     await self.get_all_responses_by_page(new_page, sujet)
+
+        new_page.close()
+
         return
 
     async def save_sujet(self, page: Any, symbole_boursier: str) -> Sujet :
