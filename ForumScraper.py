@@ -92,9 +92,20 @@ class ForumScraper (Scraper.Scraper):
         auteur: str = await sujet_container.locator(".c-profile-card__name").locator("button").text_content()
 
         source_time: Any = sujet_container.locator(".c-source__time")
+        nb_date_elements = await source_time.count()
 
-        date_string: str = await source_time.nth(0).text_content()
-        heure_string: str = await source_time.nth(1).text_content()
+        if nb_date_elements == 1:
+            date_string = ""
+            heure_string = await source_time.nth(0).text_content()
+        elif nb_date_elements >= 2:
+            date_string = await source_time.nth(0).text_content()
+            heure_string = await source_time.nth(1).text_content()
+        else:
+            date_string = ""
+            heure_string = "00:00"
+
+        date_string = date_string.strip() if date_string else ""
+        heure_string = heure_string.strip() if heure_string else "00:00"
 
         date: datetime = parse_french_date(date_string, heure_string)
 
@@ -117,9 +128,20 @@ class ForumScraper (Scraper.Scraper):
         auteur: str = await reponse_container.locator(".c-profile-card__name").locator("button").text_content()
 
         source_time: Any = reponse_container.locator(".c-source__time")
+        nb_date_elements = await source_time.count()
 
-        date_string: str = await source_time.nth(0).text_content()
-        heure_string: str = await source_time.nth(1).text_content()
+        if nb_date_elements == 1:
+            date_string = ""
+            heure_string = await source_time.nth(0).text_content()
+        elif nb_date_elements >= 2:
+            date_string = await source_time.nth(0).text_content()
+            heure_string = await source_time.nth(1).text_content()
+        else:
+            date_string = ""
+            heure_string = "00:00"
+
+        date_string = date_string.strip() if date_string else ""
+        heure_string = heure_string.strip() if heure_string else "00:00"
 
         date: datetime = parse_french_date(date_string, heure_string)
 
@@ -139,6 +161,11 @@ class ForumScraper (Scraper.Scraper):
 
 
 def parse_french_date(d_str, h_str):
+    now = datetime.now()
+
+    if not d_str:
+        clean_string = f"{now.day:02d}/{now.month:02d}/{now.year} {h_str}"
+        return datetime.strptime(clean_string, "%d/%m/%Y %H:%M")
 
     mois_fr = {
         "janv.": "01", "févr.": "02", "mars": "03", "avr.": "04",
@@ -147,10 +174,13 @@ def parse_french_date(d_str, h_str):
     }
 
     parts = d_str.split()
-    day = parts[0]
-    month = mois_fr.get(parts[1], "01")
-    year = parts[2]
 
-    clean_string = f"{day}/{month}/{year} {h_str}"
+    if len(parts) >= 3:
+        day = parts[0]
+        month = mois_fr.get(parts[1], "01")
+        year = parts[2]
+        clean_string = f"{day}/{month}/{year} {h_str}"
+    else:
+        clean_string = f"{now.day:02d}/{now.month:02d}/{now.year} {h_str}"
 
     return datetime.strptime(clean_string, "%d/%m/%Y %H:%M")
