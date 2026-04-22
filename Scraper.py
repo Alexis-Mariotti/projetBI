@@ -1,6 +1,8 @@
 
 import asyncio
 import asyncio
+from typing import Any
+
 from playwright.async_api import async_playwright, Playwright
 
 # La classe Scraper permet d'encapsuler l'usage de Playright pour avoir la même configuration de playright sur tous les usages de scraping du projet
@@ -26,8 +28,13 @@ class Scraper:
 
     # methode pour accepter les cookies sur le site de boursorama, si le mur de cookies s'affiche
     # le parametre withoutAgree permet de choisir si on accepte les cookies ou pas, par défaut on les accepte
-    async def acceptBoursoramaCookies(self, withoutAgree: bool = False):
-        cookiesWall = self.current_page.locator("#didomi-popup")
+    async def acceptBoursoramaCookies(self, page: Any = None, withoutAgree: bool = False):
+        using_page = self.current_page
+
+        if page:
+            using_page = page
+
+        cookiesWall = using_page.locator("#didomi-popup")
         if cookiesWall and await cookiesWall.is_visible():
             # on definit le bouton à cliquer differement selon si on veut accepter les cookies ou pas
             if not withoutAgree:
