@@ -34,7 +34,7 @@ class StockPricesScraper (Scraper.Scraper):
         loginSubmitButton = loginForm.locator("#login_member_connect")
 
         # si le mur de coockies s'ouvre, on l'accepte
-        await self.__acceptBoursoramaCookies();
+        await self.acceptBoursoramaCookies()
 
         # on rempli les credentials
         await mailField.fill(self.boursoLogin)
@@ -52,17 +52,6 @@ class StockPricesScraper (Scraper.Scraper):
             await self.current_page.goto("https://www.boursorama.com/")
         '''
 
-    # methode pour accepter les cookies sur le site de boursorama, si le mur de cookies s'affiche
-    # le parametre withoutAgree permet de choisir si on accepte les cookies ou pas, par défaut on les accepte
-    async def __acceptBoursoramaCookies(self, withoutAgree: bool = False):
-        cookiesWall = self.current_page.locator("#didomi-popup")
-        if cookiesWall and await cookiesWall.is_visible():
-            # on definit le bouton à cliquer differement selon si on veut accepter les cookies ou pas
-            if not withoutAgree:
-                button = cookiesWall.locator("#didomi-notice-agree-button")
-            else:
-                button = cookiesWall.locator(".didomi-continue-without-agreeing")
-            await button.click()
 
     # Fonctionnalité permettant de collecter à partir de la page d’une action du site Boursorama, toutes les
     # informations sur le cours du jour (date/heure de collecte, cours, cours d’ouverture, cours haut, cours bas, volumes)
@@ -72,7 +61,7 @@ class StockPricesScraper (Scraper.Scraper):
         await self.run("https://www.boursorama.com/cours/" + stockCode)
 
         # si le mur de coockies s'ouvre, on l'accepte
-        await self.__acceptBoursoramaCookies()
+        await self.acceptBoursoramaCookies()
 
         # attend 1 sec pour etre certain que les requettes ajax sont chargées et que les données sont affichées
         sleep(1)
