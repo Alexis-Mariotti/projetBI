@@ -13,7 +13,7 @@ class ForumScraper (Scraper.Scraper):
     def __init__(self, playwright: Playwright, is_headless: bool = False):
         super().__init__(playwright, is_headless)
 
-    async def get_all_sujets(self, action_id: int):
+    async def get_all_sujets(self, action_id: int|None):
         url_forum = self.current_page.url
         last_url_forum = await self.current_page.get_by_role("link", name="Dernière page").first.get_attribute("href")
 
@@ -32,7 +32,7 @@ class ForumScraper (Scraper.Scraper):
 
         return None
 
-    async def get_all_sujets_by_page(self, action_id: int):
+    async def get_all_sujets_by_page(self, action_id: int|None):
         list_a: list = await self.current_page.get_by_title("Voir le sujet").all()
         for a in list_a:
             href: str = await a.get_attribute("href")
@@ -47,7 +47,7 @@ class ForumScraper (Scraper.Scraper):
 
         return
 
-    async def get_all_responses(self, url: str, action_id: int):
+    async def get_all_responses(self, url: str, action_id: int|None):
         new_page: Any = await self.browser.new_page()
 
         if url.startswith("/"):
@@ -95,7 +95,7 @@ class ForumScraper (Scraper.Scraper):
 
         return
 
-    async def save_sujet(self, page: Any, action_id: int) -> Sujet :
+    async def save_sujet(self, page: Any, action_id: int|None) -> Sujet :
         sujet_container: Any = page.locator("div.c-message").first
 
         titre_brut: str = await page.locator("h1.c-title").text_content()
@@ -181,7 +181,7 @@ class ForumScraper (Scraper.Scraper):
         await self.current_page.get_by_role("navigation", name="Menu secondaire").get_by_title("Forum").click()
 
         action: Action | None = get_action_by_symbole_boursier(symbole_boursier)
-        action_id = None
+        action_id: int|None = None
 
         if action:
             action_id = action.id
