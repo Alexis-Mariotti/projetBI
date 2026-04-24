@@ -13,9 +13,7 @@ class ForumScraper (Scraper.Scraper):
     def __init__(self, playwright: Playwright, is_headless: bool = False):
         super().__init__(playwright, is_headless)
 
-    async def get_all_sujets(self, symbole_boursier: str):
-        await self.get_all_sujets_by_page(symbole_boursier)
-
+    async def get_all_sujets(self, action_id: int):
         url_forum = self.current_page.url
         last_url_forum = await self.current_page.get_by_role("link", name="Dernière page").first.get_attribute("href")
 
@@ -26,19 +24,19 @@ class ForumScraper (Scraper.Scraper):
         else:
             return None
 
-        page_number = 2
+        page_number = 1
         while page_number <= last_page_number:
             await self.current_page.goto(url_forum + "page-" + str(page_number))
-            await self.get_all_sujets_by_page(symbole_boursier)
+            await self.get_all_sujets_by_page(action_id)
             page_number += 1
 
         return None
 
-    async def get_all_sujets_by_page(self, symbole_boursier: str):
+    async def get_all_sujets_by_page(self, action_id: int):
         list_a: list = await self.current_page.get_by_title("Voir le sujet").all()
         for a in list_a:
             href: str = await a.get_attribute("href")
-            await self.get_all_responses(href, symbole_boursier)
+            await self.get_all_responses(href, action_id)
         return
 
     async def get_all_responses_by_page(self, page: Any, sujet: Sujet):
@@ -49,7 +47,7 @@ class ForumScraper (Scraper.Scraper):
 
         return
 
-    async def get_all_responses(self, url: str, symbole_boursier: str):
+    async def get_all_responses(self, url: str, action_id: int):
         new_page: Any = await self.browser.new_page()
 
         if url.startswith("/"):
@@ -59,7 +57,7 @@ class ForumScraper (Scraper.Scraper):
 
         await self.acceptBoursoramaCookies(new_page)
 
-        sujet: Sujet = await self.save_sujet(new_page, symbole_boursier)
+        sujet: Sujet = await self.save_sujet(new_page, action_id)
 
         div_main_page = new_page.locator("div.l-basic-page__main")
 
@@ -97,7 +95,7 @@ class ForumScraper (Scraper.Scraper):
 
         return
 
-    async def save_sujet(self, page: Any, symbole_boursier: str) -> Sujet :
+    async def save_sujet(self, page: Any, action_id: int) -> Sujet :
         sujet_container: Any = page.locator("div.c-message").first
 
         titre_brut: str = await page.locator("h1.c-title").text_content()
@@ -130,12 +128,6 @@ class ForumScraper (Scraper.Scraper):
         heure_string = heure_string.strip() if heure_string else "00:00"
 
         date: datetime = parse_french_date(date_string, heure_string)
-
-        action: Action|None = get_action_by_symbole_boursier(symbole_boursier)
-        action_id = None
-
-        if action:
-            action_id = action.id
 
         sujet: Sujet = Sujet(titre=titre, message=message, auteur=auteur, date=date, action=action_id)
 
@@ -187,7 +179,14 @@ class ForumScraper (Scraper.Scraper):
         await self.run("https://www.boursorama.com/cours/" + symbole_boursier)
         await self.acceptBoursoramaCookies()
         await self.current_page.get_by_role("navigation", name="Menu secondaire").get_by_title("Forum").click()
-        await self.get_all_sujets(symbole_boursier)
+
+        action: Action | None = get_action_by_symbole_boursier(symbole_boursier)
+        action_id = None
+
+        if action:
+            action_id = action.id
+
+        await self.get_all_sujets(action_id)
         await self.close()
         return
 
